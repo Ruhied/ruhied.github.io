@@ -106,7 +106,7 @@
 
 <script>
   const editor = document.getElementById("editor");
-  editor.innerHTML = 'Type whatever you want into this box, highlight whatever text you want to color, and click one of the buttons above. The text will color accordingly into the box below. You can then use the Copy All button to copy the text to your clipboard for pasting inside of Aetolia.';
+  editor.innerHTML = 'Type whatever you want into this box, highlight whatever text you want to color, and click one of the buttons above. The text will color accordingly into the box below. You can then use the Copy All button to copy the text to your clipboard for pasting inside of Aetolia. KNOWN ISSUES: If you select multiple lines of text to color it, it will combine them into one line. Also there is not a way to set text back to "default" color currently. Still working on some stuff!';
   const output = document.getElementById('output');
   const colorBoxes = document.getElementsByClassName('color-box');
   const copyAll = document.getElementById('copyAll');
@@ -115,7 +115,7 @@
   const setWidth100 = document.getElementById('setWidth100');
  
   editor.addEventListener('focus', () => {
-  if (editor.innerHTML === 'Type whatever you want into this box, highlight whatever text you want to color, and click one of the buttons above. The text will color accordingly into the box below. You can then use the Copy All button to copy the text to your clipboard for pasting inside of Aetolia.') {
+  if (editor.innerHTML === 'Type whatever you want into this box, highlight whatever text you want to color, and click one of the buttons above. The text will color accordingly into the box below. You can then use the Copy All button to copy the text to your clipboard for pasting inside of Aetolia. KNOWN ISSUES: If you select multiple lines of text to color it, it will combine them into one line. Also there is not a way to set text back to "default" color currently. Still working on some stuff!') {
     editor.innerHTML = '';
   }
 });
@@ -529,7 +529,7 @@ const resetAllColors = () => {
   output.innerText = newOutputText;
 
   // Update the editor content based on the new output text
-  updateOutput();
+  editor.innerHTML = newOutputText;
 
   // Set all text in the editor to grey
   const textNodes = editor.querySelectorAll(".colored-text");
@@ -537,6 +537,9 @@ const resetAllColors = () => {
     textNode.style.color = "grey";
     textNode.removeAttribute("data-color");
   }
+
+  // Update the output again
+  updateOutput();
 
   editor.focus();
 };
