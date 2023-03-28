@@ -110,7 +110,6 @@
   const output = document.getElementById('output');
   const colorBoxes = document.getElementsByClassName('color-box');
   const copyAll = document.getElementById('copyAll');
-  const resetColors = document.getElementById('resetColors');
   const setWidth80 = document.getElementById('setWidth80');
   const setWidth90 = document.getElementById('setWidth90');
   const setWidth100 = document.getElementById('setWidth100');
@@ -456,6 +455,11 @@ const applyColor = (colorCode) => {
     const range = selection.getRangeAt(0);
     const selectedText = range.toString();
 
+    // Prevent color from carrying over to the next line
+    if (selectedText.endsWith('\n')) {
+      return;
+    }
+
     const newNode = document.createElement('span');
     newNode.setAttribute('data-color', colorCode);
     newNode.style.color = `rgb(${color})`;
@@ -475,23 +479,38 @@ const applyColor = (colorCode) => {
   }
 };
 
-editor.addEventListener("input", () => {
-  // Prevent forbidden characters
+
+editor.addEventListener('input', (e) => {
   const forbiddenChars = /[\{\}\|]/g;
-  if (forbiddenChars.test(editor.innerText)) {
-    editor.innerText = editor.innerText.replace(forbiddenChars, "");
-    // Move the cursor to the end of the text
-    const range = document.createRange();
-    const selection = window.getSelection();
-    range.selectNodeContents(editor);
-    range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
+
+  if (e.inputType === 'insertText') {
+    const insertedText = e.data;
+    if (forbiddenChars.test(insertedText)) {
+      const selection = window.getSelection();
+      if (selection.rangeCount) {
+        const range = selection.getRangeAt(0);
+
+        // Move the cursor one character back
+        range.setStart(range.startContainer, range.startOffset - 1);
+        range.setEnd(range.endContainer, range.endOffset - 1);
+
+        // Remove the forbidden character
+        range.deleteContents();
+
+        // Move the cursor to the position after deletion
+        selection.removeAllRanges();
+        range.collapse(false);
+        selection.addRange(range);
+
+        editor.focus();
+      }
+    }
   }
 
   // Update the output based on the current editor content
   updateOutput();
 });
+
 
 for (const colorBox of colorBoxes) {
   colorBox.addEventListener('mousedown', (e) => {
@@ -501,11 +520,30 @@ for (const colorBox of colorBoxes) {
   });
 }
 
-resetColors.addEventListener('click', () => {
-  const newText = editor.innerHTML.replace(/<span.*?data-color="(.*?)">(.*?)<\/span>/g, '$2');
-  editor.innerHTML = newText;
+const resetAllColors = () => {
+  const output = document.getElementById("output");
+  const editor = document.getElementById("editor");
+
+  // Remove color tags from the output
+  const newOutputText = output.innerText.replace(/\{([^|]+)\|(\d+)\}/g, '$1');
+  output.innerText = newOutputText;
+
+  // Update the editor content based on the new output text
   updateOutput();
-});
+
+  // Set all text in the editor to grey
+  const textNodes = editor.querySelectorAll(".colored-text");
+  for (const textNode of textNodes) {
+    textNode.style.color = "grey";
+    textNode.removeAttribute("data-color");
+  }
+
+  editor.focus();
+};
+
+const resetColorsButton = document.getElementById("resetColors");
+resetColorsButton.addEventListener("click", resetAllColors);
+
 
 const setEditorWidth = (characters) => {
   editor.style.width = `calc(${characters}ch + 20px)`;
@@ -531,6 +569,42 @@ copyAll.addEventListener('click', () => {
   document.execCommand('copy');
   document.body.removeChild(el);
   alert('Copied to clipboard');
+});
+
+const handleEnterKeyPress = () => {
+  const selection = window.getSelection();
+
+  if (selection.rangeCount) {
+    const range = selection.getRangeAt(0);
+    const selectedText = range.toString();
+
+    const newNode = document.createElement('div');
+    newNode.innerHTML = '<br>';
+
+    range.deleteContents();
+    range.insertNode(newNode);
+
+    selection.removeAllRanges();
+    range.setStartAfter(newNode);
+    range.setEndAfter(newNode);
+    selection.addRange(range);
+
+    // Remove any color formatting from the new line
+    const nextSibling = newNode.nextSibling;
+    if (nextSibling && nextSibling.nodeType === Node.ELEMENT_NODE) {
+      nextSibling.innerHTML = nextSibling.innerHTML.replace(/\{([^|]+)\|(\d+)\}/g, '$1');
+    }
+
+    editor.focus();
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+};
+
+editor.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    handleEnterKeyPress();
+  }
 });
 
 
