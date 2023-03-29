@@ -72,14 +72,20 @@
   padding-bottom: 10px; /* Adjust this value as needed */
 }
 
-
-
-
+#warning {
+  background-color: #ffdddd;
+  color: #dc3545;
+  padding: 10px;
+  margin-bottom: 20px;
+}
 
 </style>
 </head>
 <body>
-  <div id="colorGroups">
+  <div id="warning">
+    <strong>Warning:</strong> If you highlight a color box, and then click on something, it will delete all the highlighted boxes. Don't do that! They don't come back! I'm working on a fix.
+  </div>
+    <div id="colorGroups">
     <div class="label">Basic Colors (0-15)</div>
     <div class="color-group" id="colorGroup1"></div>
     <div class="label">Extended Colors(16-231)</div>
