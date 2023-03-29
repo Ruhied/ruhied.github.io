@@ -41,6 +41,10 @@
     display: grid;
     grid-template-columns: repeat(17, 10px); /* Adjust the number of columns */
     grid-gap: 1px;
+    user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
   }
 
   .label {
@@ -49,6 +53,10 @@
   color: antiquewhite;
   margin-bottom: 1px;
   margin-top: 5px;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
 
 .color-box {
@@ -58,6 +66,10 @@
   margin: 1px;
   border: 1px solid black;
   box-sizing: border-box;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
 
 .horizontal-spacing {
@@ -66,10 +78,18 @@
 
 .color-group {
   line-height: 11px;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
 
 #colorGroup3 {
   padding-bottom: 10px; /* Adjust this value as needed */
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
 
 #warning {
@@ -79,12 +99,46 @@
   margin-bottom: 20px;
 }
 
+.color-box:hover::after {
+  content: attr(data-color);
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 2px 4px;
+  font-size: 12px;
+  border-radius: 4px;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tooltip {
+  position: absolute;
+  background-color: #333;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tooltip.visible {
+  visibility: visible;
+  opacity: 1;
+}
+
+#lastFiveColors {
+  padding-bottom: 20px;
+}
+
+
 </style>
 </head>
 <body>
-  <div id="warning">
+ <!-- <div id="warning"> 
     <strong>Warning:</strong> If you highlight a color box, and then click on something, it will delete all the highlighted boxes. Don't do that! They don't come back! I'm working on a fix.
-  </div>
+  </div> -->
     <div id="colorGroups">
     <div class="label">Basic Colors (0-15)</div>
     <div class="color-group" id="colorGroup1"></div>
@@ -92,7 +146,9 @@
     <div class="color-group" id="colorGroup2"></div>
     <div class="label">Grayscale (232-255)</div>
     <div class="color-group" id="colorGroup3"></div>
-
+    <div class="label">Last 5 Colors Used:</div>
+    <div class="color-group" id="lastFiveColors"></div>
+    
 
   </div>
   <div class="container">
@@ -114,7 +170,6 @@
   const editor = document.getElementById("editor");
   editor.innerHTML = 'Type whatever you want into this box, highlight whatever text you want to color, and click one of the buttons above. The text will color accordingly into the box below. You can then use the Copy All button to copy the text to your clipboard for pasting inside of Aetolia. KNOWN ISSUES: If you select multiple lines of text to color it, it will combine them into one line. Also there is not a way to set text back to "default" color currently. Still working on some stuff!';
   const output = document.getElementById('output');
-  const colorBoxes = document.getElementsByClassName('color-box');
   const copyAll = document.getElementById('copyAll');
   const setWidth80 = document.getElementById('setWidth80');
   const setWidth90 = document.getElementById('setWidth90');
@@ -405,6 +460,23 @@ const colorOrder = [
   [214, 215, 216, 217, 218, 219, -1, 220, 221, 222, 223, 224, 225, -1, 226, 227, 228, 229, 230, 231],
 ];
 
+// Create a tooltip element
+const tooltip = document.createElement('div');
+tooltip.classList.add('tooltip');
+document.body.appendChild(tooltip);
+
+// Function to show the tooltip
+const showTooltip = (e, text) => {
+  tooltip.textContent = text;
+  tooltip.style.left = `${e.clientX + 10}px`;
+  tooltip.style.top = `${e.clientY + 10}px`;
+  tooltip.classList.add('visible');
+};
+
+const hideTooltip = () => {
+  tooltip.classList.remove('visible');
+};
+
 for (let i = 0; i < Object.keys(colorMap).length; i++) {
   const rgb = colorMap[i];
   const colorBox = document.createElement('span');
@@ -441,6 +513,7 @@ for (const row of colorOrder) {
 
 
 
+
 const updateOutput = () => {
   const editorContent = editor.innerHTML;
   const spans = editor.querySelectorAll('span[data-color]');
@@ -450,8 +523,10 @@ const updateOutput = () => {
     const colorText = span.textContent;
     outputText = outputText.replace(span.outerHTML, `{${colorText}|${colorCode}}`);
   });
+  outputText = outputText.replace(/<span data-color="[^"]*">([^<]*)<\/span>/g, '$1');
   output.innerHTML = outputText;
 };
+
 
 const applyColor = (colorCode) => {
   const color = colorMap[colorCode];
@@ -463,6 +538,11 @@ const applyColor = (colorCode) => {
 
     // Prevent color from carrying over to the next line
     if (selectedText.endsWith('\n')) {
+      return;
+    }
+
+    if (range.startContainer.parentNode.classList.contains("color-box") ||
+        range.endContainer.parentNode.classList.contains("color-box")) {
       return;
     }
 
@@ -483,6 +563,7 @@ const applyColor = (colorCode) => {
     editor.focus();
     editor.dispatchEvent(new Event('input', { bubbles: true }));
   }
+  updateLastFiveColors(colorCode);
 };
 
 
@@ -518,13 +599,15 @@ editor.addEventListener('input', (e) => {
 });
 
 
-for (const colorBox of colorBoxes) {
-  colorBox.addEventListener('mousedown', (e) => {
-    e.preventDefault(); // Prevent color boxes from disappearing
-    applyColor(colorBox.dataset.color);
-    editor.focus();
+const colorBoxes = document.querySelectorAll('.color-box');
+colorBoxes.forEach((colorBox) => {
+  colorBox.addEventListener('mouseover', (e) => {
+    const colorNumber = e.target.dataset.color;
+    showTooltip(e, colorNumber);
   });
-}
+  colorBox.addEventListener('mouseout', hideTooltip);
+});
+
 
 const resetAllColors = () => {
   const output = document.getElementById("output");
@@ -615,6 +698,57 @@ editor.addEventListener('keydown', (e) => {
     handleEnterKeyPress();
   }
 });
+
+const lastFiveColors = [];
+
+const updateLastFiveColors = (colorCode) => {
+  // If the color is already in the last five, remove it
+  const index = lastFiveColors.indexOf(colorCode);
+  if (index > -1) {
+    lastFiveColors.splice(index, 1);
+  }
+
+  // Add the new color to the beginning of the array
+  lastFiveColors.unshift(colorCode);
+
+  // If there are more than 5 colors, remove the last one
+  if (lastFiveColors.length > 5) {
+    lastFiveColors.pop();
+  }
+
+  // Update the display
+  const lastFiveColorsElement = document.getElementById("lastFiveColors");
+  lastFiveColorsElement.innerHTML = '';
+  for (const colorCode of lastFiveColors) {
+    const colorBox = createColorBox(colorCode);
+    lastFiveColorsElement.appendChild(colorBox);
+  }
+};
+
+
+colorBoxes.forEach((colorBox) => {
+  colorBox.addEventListener('mouseover', (e) => {
+    const colorNumber = e.target.dataset.color;
+    showTooltip(e, colorNumber);
+  });
+  colorBox.addEventListener('mouseout', hideTooltip);
+  colorBox.addEventListener('mousedown', (e) => { // Add this line
+    e.preventDefault(); // Prevent color boxes from disappearing
+    applyColor(colorBox.dataset.color);
+    editor.focus();
+  });
+});
+
+const createColorBox = (colorCode) => {
+  const rgb = colorMap[colorCode];
+  const colorBox = document.createElement('span');
+  colorBox.classList.add('color-box');
+  colorBox.dataset.color = colorCode;
+  colorBox.style.backgroundColor = `rgb(${rgb})`;
+  colorBox.title = colorCode;
+  return colorBox;
+};
+
 
 
 </script>
