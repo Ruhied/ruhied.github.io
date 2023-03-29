@@ -734,14 +734,6 @@ const addToLastFiveUsedColors = (colorCode) => {
   updateLastFiveUsedColorsUI();
 };
 
-// Apply the color to the selected text when clicking a color box
-for (let i = 0; i < colorBoxes.length; i++) {
-  colorBoxes[i].addEventListener('click', () => {
-    applyColor(colorBoxes[i].dataset.color);
-    editor.focus();
-    addToLastFiveUsedColors(colorBoxes[i].dataset.color); // Add the color to the lastFiveUsedColors array
-  });
-}
 
 // Attach event listeners to the last-used color boxes
 const lastUsedColorBoxes = document.querySelectorAll('.last-used-color');
@@ -761,16 +753,26 @@ for (let i = 0; i < lastUsedColorBoxes.length; i++) {
 }
 
 
+// Remove the first event listener
+// for (let i = 0; i < colorBoxes.length; i++) {
+//   colorBoxes[i].addEventListener('click', () => {
+//     applyColor(colorBoxes[i].dataset.color);
+//     editor.focus();
+//     addToLastFiveUsedColors(colorBoxes[i].dataset.color);
+//   });
+// }
+
 colorBoxes.forEach((colorBox) => {
   colorBox.addEventListener('mouseover', (e) => {
     const colorNumber = e.target.dataset.color;
     showTooltip(e, colorNumber);
   });
   colorBox.addEventListener('mouseout', hideTooltip);
-  colorBox.addEventListener('mousedown', (e) => { // Add this line
-    e.preventDefault(); // Prevent color boxes from disappearing
+  colorBox.addEventListener('mousedown', (e) => {
+    e.preventDefault();
     applyColor(colorBox.dataset.color);
     editor.focus();
+    addToLastFiveUsedColors(colorBox.dataset.color); // Add this line
   });
 });
 
