@@ -147,7 +147,7 @@
     <div class="label">Grayscale (232-255)</div>
     <div class="color-group" id="colorGroup3"></div>
     <div class="label">Last 5 Colors Used:</div>
-    <div class="color-group" id="lastFiveColors"></div>
+    <div class="color-group" id="lastFiveUsedColors"></div>
     
 
   </div>
@@ -699,31 +699,66 @@ editor.addEventListener('keydown', (e) => {
   }
 });
 
-const lastFiveColors = [];
+const lastFiveUsedColors = [];
+const lastFiveUsedColorsContainer = document.getElementById('lastFiveUsedColors');
 
-const updateLastFiveColors = (colorCode) => {
-  // If the color is already in the last five, remove it
-  const index = lastFiveColors.indexOf(colorCode);
-  if (index > -1) {
-    lastFiveColors.splice(index, 1);
-  }
-
-  // Add the new color to the beginning of the array
-  lastFiveColors.unshift(colorCode);
-
-  // If there are more than 5 colors, remove the last one
-  if (lastFiveColors.length > 5) {
-    lastFiveColors.pop();
-  }
-
-  // Update the display
-  const lastFiveColorsElement = document.getElementById("lastFiveColors");
-  lastFiveColorsElement.innerHTML = '';
-  for (const colorCode of lastFiveColors) {
-    const colorBox = createColorBox(colorCode);
-    lastFiveColorsElement.appendChild(colorBox);
-  }
+const updateLastFiveColors = () => {
+  const lastFiveUsedColorBoxes = document.querySelectorAll('.last-used-color');
+  lastFiveUsedColorBoxes.forEach((colorBox, index) => {
+    const colorCode = lastFiveUsedColors[index];
+    colorBox.setAttribute('data-color', colorCode);
+    colorBox.style.backgroundColor = `rgb(${colorMap[colorCode]})`;
+    colorBox.title = `Color ${colorCode}`;
+  });
 };
+
+const updateLastFiveUsedColorsUI = () => {
+  lastFiveUsedColorsContainer.innerHTML = '';
+  lastFiveUsedColors.forEach(colorCode => {
+    const colorBox = createLastUsedColorBox(colorCode);
+    lastFiveUsedColorsContainer.appendChild(colorBox);
+  });
+};
+
+
+// Add the color code to the lastFiveUsedColors array and update the UI
+const addToLastFiveUsedColors = (colorCode) => {
+  if (lastFiveUsedColors.includes(colorCode)) {
+    // If the color is already in the array, remove it
+    lastFiveUsedColors.splice(lastFiveUsedColors.indexOf(colorCode), 1);
+  }
+  lastFiveUsedColors.unshift(colorCode); // Add the color to the beginning of the array
+  if (lastFiveUsedColors.length > 5) {
+    lastFiveUsedColors.pop(); // Remove the last color if there are more than 5
+  }
+  updateLastFiveUsedColorsUI();
+};
+
+// Apply the color to the selected text when clicking a color box
+for (let i = 0; i < colorBoxes.length; i++) {
+  colorBoxes[i].addEventListener('click', () => {
+    applyColor(colorBoxes[i].dataset.color);
+    editor.focus();
+    addToLastFiveUsedColors(colorBoxes[i].dataset.color); // Add the color to the lastFiveUsedColors array
+  });
+}
+
+// Attach event listeners to the last-used color boxes
+const lastUsedColorBoxes = document.querySelectorAll('.last-used-color');
+for (let i = 0; i < lastUsedColorBoxes.length; i++) {
+  lastUsedColorBoxes[i].addEventListener('click', () => {
+    applyColor(lastUsedColorBoxes[i].dataset.color);
+    editor.focus();
+  });
+
+  // Custom tooltips
+  lastUsedColorBoxes[i].addEventListener('mouseover', (e) => {
+    const colorNumber = e.target.dataset.color;
+    showTooltip(e, colorNumber);
+  });
+
+  lastUsedColorBoxes[i].addEventListener('mouseout', hideTooltip);
+}
 
 
 colorBoxes.forEach((colorBox) => {
@@ -749,6 +784,28 @@ const createColorBox = (colorCode) => {
   return colorBox;
 };
 
+const createLastUsedColorBox = (colorCode) => {
+  const colorBox = document.createElement('span');
+  colorBox.className = 'color-box last-used-color';
+  colorBox.setAttribute('data-color', colorCode);
+  colorBox.style.backgroundColor = `rgb(${colorMap[colorCode]})`;
+  colorBox.title = `Color ${colorCode}`;
+
+  colorBox.addEventListener('mouseover', (e) => {
+    const colorNumber = e.target.dataset.color;
+    showTooltip(e, colorNumber);
+  });
+
+  colorBox.addEventListener('mouseout', hideTooltip);
+
+  colorBox.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    applyColor(colorBox.dataset.color);
+    editor.focus();
+  });
+
+  return colorBox;
+};
 
 
 </script>
